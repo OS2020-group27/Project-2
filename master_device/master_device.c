@@ -69,7 +69,8 @@ void mmap_close(struct vm_area_struct *vma){
 	//kernel will take care
 }
 
-void mmap_fault(struct vm_area_struct *vma,struct vm_fault *vmf){//fault operation
+int mmap_fault(struct vm_fault *vmf){//fault operation
+	struct vm_area_struct *vma = vmf->vma;
 	struct page *page = virt_to_page(vma->vm_private_data);
 	get_page(page);
 	vmf->page = page;
@@ -80,8 +81,8 @@ void mmap_fault(struct vm_area_struct *vma,struct vm_fault *vmf){//fault operati
 static struct vm_operations_struct mmap_operation = {//重新定義mmap的operations
 	.open = mmap_open,
 	.close = mmap_close,
-	.fault = mmap_fault//當vma發生缺頁的時候要幫它找
-}
+	.fault = mmap_fault
+};
 
 static int mmap_exec(struct file *File, struct vm_area_struct *vma){//重新定義mmap
 	unsigned long start = vma->vm_start;
@@ -91,7 +92,7 @@ static int mmap_exec(struct file *File, struct vm_area_struct *vma){//重新定�
 	remap_pfn_range(vma, start, pfn, size, prot);//
 	vma->vm_flags |= VM_RESERVED;
 	vma->vm_ops = &mmap_operation;
-	vma->private_data = File->private_data;
+	vma->vm_private_data = File->private_data;
 	mmap_open(vma);
 	return 0;
 }
