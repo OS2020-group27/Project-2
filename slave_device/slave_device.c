@@ -59,13 +59,27 @@ static mm_segment_t old_fs;
 static ksocket_t sockfd_cli;//socket to the master server
 static struct sockaddr_in addr_srv; //address of the master server
 
+// add part 1
+static int my_mmap(struct file *filp, struct vm_area_struct *vma);
+void mmap_open(struct vm_area_struct *vma) {}
+void mmap_close(struct vm_area_struct *vma) {}
+
 //file operations
 static struct file_operations slave_fops = {
 	.owner = THIS_MODULE,
 	.unlocked_ioctl = slave_ioctl,
 	.open = slave_open,
 	.read = receive_msg,
-	.release = slave_close
+	.release = slave_close,
+
+	// add part 2
+	.mmap = my_mmap
+};
+
+//add part 3
+struct vm_operations_struct mmap_vm_ops = {
+	.open = mmap_open,
+	.close = mmap_close
 };
 
 //device info
@@ -163,7 +177,8 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			ret = 0;
 			break;
 		case slave_IOCTL_MMAP:
-
+			// add part 4
+			ret = krecv(sockfd_cli, file->private_data, PAGE_SIZE, 0);
 			break;
 
 		case slave_IOCTL_EXIT:
@@ -175,7 +190,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			ret = 0;
 			break;
 		default:
-            pgd = pgd_offset(current->mm, ioctl_param);
+			apgd = pgd_offset(current->mm, ioctl_param);
 			p4d = p4d_offset(pgd, ioctl_param);
 			pud = pud_offset(p4d, ioctl_param);
 			pmd = pmd_offset(pud, ioctl_param);
@@ -201,7 +216,29 @@ ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp )
 	return len;
 }
 
+// add part 5
+static int my_mmap(struct file *filp, struct vm_area_struct *vma)
+{
+	kbuff = kzalloc(BUF_SIZE, GFP_KERNEL);
 
+	unsigned long offset = vma->vm_pgoff << PAGE_SHIFT;
+	unsigned long pfn_start = (virt_to_phys(kbuff) >> PAGE_SHIFT) + vma->vm_pgoff;
+	unsigned long virt_start = (unsigned long)kbuff + offset;
+	unsigned long size = vma->vm_end - vma->vm_start;
+
+	printk("phy: 0x%lx, offset: 0x%lx, size: 0x%lx\n", pfn_start << PAGE_SHIFT, offset, size);
+
+	if (remap_pfn_range(vma, vma->vm_start, pfn_start, size, vma->vm_page_prot))
+		return -EIO;
+
+	printk("%s: map 0x%lx to 0x%lx, size: 0x%lx\n", __func__, virt_start, vma->vm_start, size);
+
+	vma->vm_flags |= VM_RESERVED;
+	vma->vm_private_data = filp->private_data;
+	vma->vm_ops = &mmap_vm_ops;
+	mmap_open(vma);
+	return 0;
+}
 
 
 module_init(slave_init);
