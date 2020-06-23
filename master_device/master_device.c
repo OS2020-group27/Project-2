@@ -30,6 +30,8 @@
 #define master_IOCTL_EXIT 0x12345679
 #define BUF_SIZE 512
 
+#define MAP_LENS PAGE_SIZE * 100
+
 typedef struct socket * ksocket_t;
 
 struct dentry  *file1;//debug file
@@ -58,13 +60,44 @@ static mm_segment_t old_fs;
 static int addr_len;
 //static  struct mmap_info *mmap_msg; // pointer to the mapped data in this device
 
+//mmap operations
+static struct vm_operations_struct mmap_operation = {//重新定義mmap的operations
+	.open = mmap_open,
+	.close = mmap_close,
+	.fault = mmap_fault//當vma發生缺頁的時候要幫它找
+}
+void mmap_open(struct vm_area_struct *vma){
+	//kernel will take care
+}
+void mmap_close(struct vm_area_struct *vma){
+	//kernel will take care
+}
+void mmap_fault(struct vm_area_struct *vma,struct vm_fault *vmf){//fault operation
+	struct page *page = virt_to_page(vma->vm_private_data);
+	get_page(page);
+	vmf->page = page;
+	//put("fault page set complete");
+	return 0;
+}
+static int mmap_exec(struct file *File, struct vm_area_struct *vma){//重新定義mmap
+	unsigned long start = vma->vm_start;
+	unsigned long pfn = virt_to_phys(File->private_data) >> PAGE_SHIFT;
+	unsigned long size = vma->vm_end - vma->vm_start;
+	pgprot_t prot = vma->vm_page_prot;
+	remap_pfn_range(vma, start, pfn, size, prot);//
+	vma->vm_prot |= VM_RESERVED;
+	vma->vm_ops = &mmap_operation;
+	vma->private_data = File->private_data;
+	mmap_open(vma);
+}
 //file operations
 static struct file_operations master_fops = {
 	.owner = THIS_MODULE,
 	.unlocked_ioctl = master_ioctl,
 	.open = master_open,
 	.write = send_msg,
-	.release = master_close
+	.release = master_close,
+	.mmap = mmap_exec
 };
 
 //device info
@@ -137,11 +170,13 @@ static void __exit master_exit(void)
 
 int master_close(struct inode *inode, struct file *filp)
 {
+	kfree(filp->private_data);
 	return 0;
 }
 
 int master_open(struct inode *inode, struct file *filp)
 {
+	filp->private_data = kmalloc(MAP_LENS, GFP_KERNEL);//用來對應缺頁的空間
 	return 0;
 }
 
@@ -175,6 +210,7 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num, unsigned lon
 			ret = 0;
 			break;
 		case master_IOCTL_MMAP:
+			ksend(sockfd_cli, file->private_data, ioctl_param, 0);//透過socket傳資料
 			break;
 		case master_IOCTL_EXIT:
 			if(kclose(sockfd_cli) == -1)
@@ -210,7 +246,6 @@ static ssize_t send_msg(struct file *file, const char __user *buf, size_t count,
 	return count;
 
 }
-
 
 
 
