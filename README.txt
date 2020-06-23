@@ -18,3 +18,12 @@ Make sure that you are under the path "./user_program" when you execute user pro
 Though the execution order of user program "master" and "slave" does not matter,
 it is suggested to execute "master" first to get more precise transmission time.
 
+Reference:
+1.https://reurl.cc/yZjmlM
+2.https://reurl.cc/20k8XE
+3.https://reurl.cc/V6vRqy
+4.https://reurl.cc/b5jGaM
+5.https://reurl.cc/20k8VO
+6.https://reurl.cc/QdkWg9
+7.https://reurl.cc/z8jrx0
+
