@@ -91,10 +91,12 @@ void mmap_close(struct vm_area_struct *vma){
 }
 
 // fault operation
-void mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf){
+int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf){
 	struct page *page = virt_to_page(vma->vm_private_data);
 	get_page(page);
 	vmf->page = page;
+
+	return 0;
 }
 
 static int mmap_exec(struct file *filp, struct vm_area_struct *vma)
