@@ -59,7 +59,7 @@ static mm_segment_t old_fs;
 static ksocket_t sockfd_cli;//socket to the master server
 static struct sockaddr_in addr_srv; //address of the master server
 
-// add part 1
+//implement mmap method
 static int my_mmap(struct file *filp, struct vm_area_struct *vma);
 void mmap_open(struct vm_area_struct *vma) {}
 void mmap_close(struct vm_area_struct *vma) {}
@@ -71,14 +71,51 @@ static struct file_operations slave_fops = {
 	.open = slave_open,
 	.read = receive_msg,
 	.release = slave_close,
-	.mmap = my_mmap // add part 2
+	.mmap = mmap_exec  //mmap function
 };
 
-// add part 3
-struct vm_operations_struct mmap_vm_ops = {
+//mmap operations
+struct vm_operations_struct mmap_operation = {
 	.open = mmap_open,
-	.close = mmap_close
+	.close = mmap_close,
+	.fault = mmap_fault
 };
+
+void mmap_open(struct vm_area_struct *vma){
+	//kernel will take care
+}
+
+void mmap_close(struct vm_area_struct *vma){
+	//kernel will take care
+}
+
+// fault operation
+void mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf){
+	struct page *page = virt_to_page(vma->vm_private_data);
+	get_page(page);
+	vmf->page = page;
+
+	return 0;
+}
+
+static int mmap_exec(struct file *filp, struct vm_area_struct *vma)
+{
+	unsigned long start = vma->vm_start;
+	unsigned long pfn = virt_to_phys(filp->private_data) >> PAGE_SHIFT;
+	unsigned long size = vma->vm_end - vma->vm_start;
+	pgprot_t prot = vma->vm_page_prot;
+
+	if (remap_pfn_range(vma, start, pfn, size, prot))
+		return -EIO;
+
+	vma->vm_flags |= VM_RESERVED;
+	vma->vm_ops = &mmap_operation;
+	vma->vm_private_data = filp->private_data;
+	mmap_open(vma);
+
+	return 0;
+}
+
 
 //device info
 static struct miscdevice slave_dev = {
@@ -175,7 +212,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			ret = 0;
 			break;
 		case slave_IOCTL_MMAP:
-			// add part 4
+			// receive data from kernel socket
 			ret = krecv(sockfd_cli, file->private_data, PAGE_SIZE, 0);
 			break;
 
@@ -213,24 +250,6 @@ ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp )
 		return -ENOMEM;
 	return len;
 }
-
-// add part 5
-static int my_mmap(struct file *filp, struct vm_area_struct *vma)
-{
-	unsigned long pfn_start = vma->vm_pgoff;
-	unsigned long size = vma->vm_end - vma->vm_start;
-
-	if (remap_pfn_range(vma, vma->vm_start, pfn_start, size, vma->vm_page_prot))
-		return -EIO;
-
-	vma->vm_flags |= VM_RESERVED;
-	vma->vm_private_data = filp->private_data;
-	vma->vm_ops = &mmap_vm_ops;
-	mmap_open(vma);
-
-	return 0;
-}
-
 
 module_init(slave_init);
 module_exit(slave_exit);
