@@ -60,9 +60,10 @@ static ksocket_t sockfd_cli;//socket to the master server
 static struct sockaddr_in addr_srv; //address of the master server
 
 //implement mmap method
-static int my_mmap(struct file *filp, struct vm_area_struct *vma);
-void mmap_open(struct vm_area_struct *vma) {}
-void mmap_close(struct vm_area_struct *vma) {}
+static int mmap_exec(struct file *filp, struct vm_area_struct *vma);
+void mmap_open(struct vm_area_struct *vma);
+void mmap_close(struct vm_area_struct *vma);
+void mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf);
 
 //file operations
 static struct file_operations slave_fops = {
@@ -225,7 +226,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			ret = 0;
 			break;
 		default:
-			apgd = pgd_offset(current->mm, ioctl_param);
+			pgd = pgd_offset(current->mm, ioctl_param);
 			p4d = p4d_offset(pgd, ioctl_param);
 			pud = pud_offset(p4d, ioctl_param);
 			pmd = pmd_offset(pud, ioctl_param);
