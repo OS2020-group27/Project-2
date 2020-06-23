@@ -194,7 +194,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			pmd = pmd_offset(pud, ioctl_param);
 			ptep = pte_offset_kernel(pmd , ioctl_param);
 			pte = *ptep;
-			printk("slave: %lX\n", pte);
+			printk("%lX\n", pte);
 			ret = 0;
 			break;
 	}
