@@ -14,6 +14,11 @@
 #define BUF_SIZE 512
 #define MAP_SIZE PAGE_SIZE * 100
 
+#define master_IOCTL_PRINTPHYSADDR 0x12345676
+#define master_IOCTL_CREATESOCK 0x12345677
+#define master_IOCTL_MMAP 0x12345678
+#define master_IOCTL_EXIT 0x12345679
+
 size_t get_filesize(const char* filename);//get the size of the input file
 
 
@@ -44,14 +49,15 @@ int main (int argc, char* argv[])
     int total_filesize = 0;
     gettimeofday(&start ,NULL);
 
-    // This is the line where the process stuck.
-    if(ioctl(dev_fd, 0x12345677) == -1) //0x12345677 : create socket and accept the connection from the slave
-    {
-        perror("ioclt server create socket error\n");
-        return 1;
-    }
 
     for (int file_id = 0; file_id < num_files; file_id++) {
+			
+		// This is the line where the process stuck.
+		if(ioctl(dev_fd, master_IOCTL_CREATESOCK) == -1) //0x12345677 : create socket and accept the connection from the slave
+		{
+			perror("ioclt server create socket error\n");
+			return 1;
+		}
 
         if( (file_fd = open (file_name[file_id], O_RDWR)) < 0 )
         {
@@ -84,18 +90,20 @@ int main (int argc, char* argv[])
                     kernel_address = mmap(NULL, length, PROT_WRITE, MAP_SHARED, dev_fd, offset);
                     memcpy(kernel_address, file_address, length);
                     offset += length;
-                    ioctl(dev_fd, 0x12345678, length);
+                    ioctl(dev_fd, master_IOCTL_MMAP, length);
                 }
                 offset = 0;
                 break;
         }
+		
+		if(ioctl(dev_fd, master_IOCTL_EXIT) == -1) // end sending data, close the connection
+		{
+			perror("ioclt server exits error\n");
+			return 1;
+		}
+		
     }
 
-    if(ioctl(dev_fd, 0x12345679) == -1) // end sending data, close the connection
-    {
-        perror("ioclt server exits error\n");
-        return 1;
-    }
     gettimeofday(&end, NULL);
     trans_time = (end.tv_sec - start.tv_sec)*1000 + (end.tv_usec - start.tv_usec)*0.0001;
     printf("Transmission time: %lf ms, File size: %ld bytes\n", trans_time, total_filesize / 8);
