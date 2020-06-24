@@ -220,6 +220,8 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			while((len = krecv(sockfd_cli, file->private_data+offset, PAGE_SIZE, 0)) > 0) {
 				printk("slave received: %s", file->private_data);
 				offset += len;
+				if(offset >= PAGE_SIZE * 99)
+					break;
 			}
 			ret = offset;
 			offset = 0;
