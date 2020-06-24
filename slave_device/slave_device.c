@@ -216,6 +216,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			break;
 		case slave_IOCTL_MMAP:
 			// receive data from kernel socket
+			memset(file->private_data, '\0', MAP_LENS);
 			while(len = krecv(sockfd_cli, file->private_data+offset, PAGE_SIZE, 0) > 0) {
 				printk("slave received: %s", file->private_data);
 				offset += len;
