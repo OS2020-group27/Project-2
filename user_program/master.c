@@ -12,6 +12,8 @@
 
 #define PAGE_SIZE 4096
 #define BUF_SIZE 512
+#define MAP_SIZE PAGE_SIZE * 100
+
 size_t get_filesize(const char* filename);//get the size of the input file
 
 
@@ -49,7 +51,6 @@ int main (int argc, char* argv[])
         return 1;
     }
 
-
     for (int file_id = 0; file_id < num_files; file_id++) {
 
         if( (file_fd = open (file_name[file_id], O_RDWR)) < 0 )
@@ -64,7 +65,6 @@ int main (int argc, char* argv[])
         	return 1;
         }
         total_filesize += file_size;
-        char *src, *dst;
         
         switch(method[0])
         {
@@ -76,23 +76,15 @@ int main (int argc, char* argv[])
                 break;
             case 'm': //mmap
                 while (offset < file_size) {
-                    if((src = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, file_fd, offset)) == (void *) -1) {
-                        perror("mapping input file");
-                        return 1;
+                    size_t length = MAP_SIZE;
+                    if ((file_size - offset) < length) {
+                        length = file_size - offset;
                     }
-                    if((dst = mmap(NULL, PAGE_SIZE, PROT_WRITE, MAP_SHARED, dev_fd, dev_offset)) == (void *) -1) {
-                        perror("mapping output device");
-                        return 1;
-                    }
-                    do {
-                        int len = (offset + BUF_SIZE > file_size ? file_size % BUF_SIZE : BUF_SIZE);
-                        memcpy(dst, src, len);
-                        offset += len;
-                        dev_offset += len;
-                        ioctl(dev_fd, 0x12345678, len);
-                    } while (offset < file_size && offset % PAGE_SIZE != 0);
-                    ioctl(dev_fd, 0x12345676, (unsigned long)src);
-                    munmap(src, PAGE_SIZE);
+                    file_address = mmap(NULL, length, PROT_READ, MAP_SHARED, file_fd, offset);
+                    kernel_address = mmap(NULL, length, PROT_WRITE, MAP_SHARED, dev_fd, offset);
+                    memcpy(kernel_address, file_address, length);
+                    offset += length;
+                    ioctl(dev_fd, 0x12345678, length);
                 }
                 offset = 0;
                 break;
