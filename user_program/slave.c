@@ -85,7 +85,7 @@ int main (int argc, char* argv[])
 				while(1) // read from the the device
 				{
 					ret = ioctl(dev_fd, slave_IOCTL_MMAP);
-					printf("ret = %lu\n", ret);
+					fprintf(stderr, "ret = %lu\n", ret);
 					if (ret == 0)
 						break;
 					posix_fallocate(file_fd, file_size, ret);
@@ -98,8 +98,8 @@ int main (int argc, char* argv[])
 					memcpy(file_address, kernel_address, ret);
 					file_size += ret;
 					total_size += ret;
-					printf("file_size = %lu\n", file_size);
-				}//  while(ret > 0);
+					fprintf(stderr, "file_size = %lu\n", file_size);
+				}
 				// finished receiving the file
 				ftruncate(file_fd, file_size); // resize the file to correct size
 				
