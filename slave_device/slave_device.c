@@ -166,7 +166,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 
 	int addr_len ;
 	unsigned int i;
-	size_t len, data_size = 0;
+	size_t len, data_size = 0, offset = 0;
 	char *tmp, ip[20], buf[BUF_SIZE];
 	struct page *p_print;
 	unsigned char *px;
@@ -216,11 +216,12 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			break;
 		case slave_IOCTL_MMAP:
 			// receive data from kernel socket
-			while(len = krecv(sockfd_cli, file->private_data+ret, PAGE_SIZE, 0) > 0) {
+			while(len = krecv(sockfd_cli, file->private_data+offset, PAGE_SIZE, 0) > 0) {
 				printk("slave received: %s", file->private_data);
-				ret += len;
+				offset += len;
 			}
-			len = 0;
+			ret = offset;
+			offset = 0;
 			break;
 
 		case slave_IOCTL_EXIT:
