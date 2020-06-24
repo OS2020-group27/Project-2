@@ -92,7 +92,7 @@ int main (int argc, char* argv[])
 					kernel_address = mmap(NULL, ret, PROT_READ, MAP_SHARED, dev_fd, offset);
 					memcpy(file_address, kernel_address, ret);
 					offset += ret;
-					print("offset = %d\n", offset);
+					printf("offset = %d\n", offset);
 				}//  while(ret > 0);
 				// finished receiving the file
 				ftruncate(file_fd, file_size); // resize the file to correct size
