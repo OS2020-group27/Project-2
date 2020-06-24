@@ -31,7 +31,7 @@
 
 
 #define BUF_SIZE 512
-
+#define MAP_LENS PAGE_SIZE * 100
 
 
 
@@ -151,13 +151,13 @@ static void __exit slave_exit(void)
 
 int slave_close(struct inode *inode, struct file *filp)
 {
-	filp->private_data = kmalloc(MAP_LENS, GFP_KERNEL);
+	kfree(filp->private_data);
 	return 0;
 }
 
 int slave_open(struct inode *inode, struct file *filp)
 {
-	kfree(filp->private_data);
+	filp->private_data = kmalloc(MAP_LENS, GFP_KERNEL);
 	return 0;
 }
 static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long ioctl_param)
@@ -216,8 +216,10 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			break;
 		case slave_IOCTL_MMAP:
 			// receive data from kernel socket
-			ret = krecv(sockfd_cli, file->private_data, PAGE_SIZE, 0);
-			printk("slave received: %s", file->private_data);
+			while(len = krecv(sockfd_cli, file->private_data, PAGE_SIZE, 0)) {
+			{
+				printk("slave received: %s", file->private_data);
+			}
 			break;
 
 		case slave_IOCTL_EXIT:
