@@ -11,7 +11,9 @@
 #include <sys/time.h>
 
 #define PAGE_SIZE 4096
+#define MAP_LENS PAGE_SIZE * 100
 #define BUF_SIZE 512
+#define HEAD_SIZE 50
 
 #define slave_IOCTL_PRINTPHYSADDR 0x12345676
 #define slave_IOCTL_CREATESOCK 0x12345677
@@ -60,6 +62,7 @@ int main (int argc, char* argv[])
 	{
 		strcpy(file_name, argv[n+2]);
 		fprintf(stderr, "file%d = %s\n", n, file_name);
+		file_size = 0;
 		if( (file_fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC)) < 0)
 		{
 			perror("failed to open input file\n");
@@ -71,32 +74,29 @@ int main (int argc, char* argv[])
 			case 'f': // fcntl: read()/write()
 				while((ret = read(dev_fd, buf, sizeof(buf))) > 0) // read from the the device
 				{
-					printf("received %lu: %s\n", ret, buf);
+					// printf("received %lu: %s\n", ret, buf);
 					write(file_fd, buf, ret); //write to the input file
 					file_size += ret;
-					total_size += ret;
 				}
+				total_size += file_size;
 				break;
 			case 'm': // mmap:
 				while(1) // read from the the device
 				{
 					ret = ioctl(dev_fd, slave_IOCTL_MMAP);
 					printf("ret = %lu\n", ret);
-					if (ret == 0) {
-						file_size = offset;
-						total_size += offset;
+					if (ret == 0)
 						break;
-					}
-					posix_fallocate(file_fd, offset, ret);
-					file_address = mmap(NULL, ret, PROT_WRITE, MAP_SHARED, file_fd, offset);
-					kernel_address = mmap(NULL, ret, PROT_READ, MAP_SHARED, dev_fd, offset);
+					posix_fallocate(file_fd, file_size, ret);
+					file_address = mmap(NULL, MAP_LENS, PROT_WRITE, MAP_SHARED, file_fd, file_size);
+					kernel_address = mmap(NULL, MAP_LENS, PROT_READ, MAP_SHARED, dev_fd, total_size);
 					memcpy(file_address, kernel_address, ret);
-					offset += ret;
-					printf("offset = %d\n", offset);
+					file_size += ret;
+					total_size += ret;
+					printf("file_size = %lu\n", file_size);
 				}//  while(ret > 0);
 				// finished receiving the file
 				ftruncate(file_fd, file_size); // resize the file to correct size
-				// print physical address of the page
 				
 				break;
 		}
