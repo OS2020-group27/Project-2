@@ -16,49 +16,29 @@ master:
 	@echo
 	sudo ./$(usr)/master 1 $(sample1)2 mmap
 	@echo
-	sudo ./$(usr)/master 1 $(sample2) fcntl
+	sudo ./$(usr)/master 10 $(sample1)1 $(sample1)2 $(sample1)3 $(sample1)4 $(sample1)5 $(sample1)6 $(sample1)7 $(sample1)8 $(sample1)9 $(sample1)10 fcntl
 	@echo
-	sudo ./$(usr)/master 1 $(sample2) fcntl
+	sudo ./$(usr)/master 10 $(sample1)1 $(sample1)2 $(sample1)3 $(sample1)4 $(sample1)5 $(sample1)6 $(sample1)7 $(sample1)8 $(sample1)9 $(sample1)10 fcntl
 	@echo
-	sudo ./$(usr)/master 1 $(sample2) mmap
+	sudo ./$(usr)/master 10 $(sample1)1 $(sample1)2 $(sample1)3 $(sample1)4 $(sample1)5 $(sample1)6 $(sample1)7 $(sample1)8 $(sample1)9 $(sample1)10 mmap
 	@echo
-	sudo ./$(usr)/master 1 $(sample2) mmap
-	@echo
-	sudo ./$(usr)/master 11 $(sample1)1 $(sample1)2 $(sample1)3 $(sample1)4 $(sample1)5 $(sample1)6 $(sample1)7 $(sample1)8 $(sample1)9 $(sample1)10 fcntl
-	@echo
-	sudo ./$(usr)/master 11 $(sample1)1 $(sample1)2 $(sample1)3 $(sample1)4 $(sample1)5 $(sample1)6 $(sample1)7 $(sample1)8 $(sample1)9 $(sample1)10 fcntl
-	@echo
-	sudo ./$(usr)/master 11 $(sample1)1 $(sample1)2 $(sample1)3 $(sample1)4 $(sample1)5 $(sample1)6 $(sample1)7 $(sample1)8 $(sample1)9 $(sample1)10 mmap
-	@echo
-	sudo ./$(usr)/master 11 $(sample1)1 $(sample1)2 $(sample1)3 $(sample1)4 $(sample1)5 $(sample1)6 $(sample1)7 $(sample1)8 $(sample1)9 $(sample1)10 mmap
+	sudo ./$(usr)/master 10 $(sample1)1 $(sample1)2 $(sample1)3 $(sample1)4 $(sample1)5 $(sample1)6 $(sample1)7 $(sample1)8 $(sample1)9 $(sample1)10 mmap
 
 ip=127.0.0.1
 slave:
 	sudo rm -rf output
 	mkdir output
 	sudo ./$(usr)/slave 1 output/file.out fcntl $(ip)
-	make small_cmp
+	sudo diff output/file.out $(sample1)2
 	@echo
 	sudo ./$(usr)/slave 1 output/file.out mmap $(ip)
-	make small_cmp
+	sudo diff output/file.out $(sample1)2
 	@echo
 	sudo ./$(usr)/slave 1 output/file.out fcntl $(ip)
-	make small_cmp
+	sudo diff output/file.out $(sample1)2
 	@echo
 	sudo ./$(usr)/slave 1 output/file.out mmap $(ip)
-	make small_cmp
-	@echo
-	sudo ./$(usr)/slave 1 output/file.out fcntl $(ip)
-	make large_cmp
-	@echo
-	sudo ./$(usr)/slave 1 output/file.out mmap $(ip)
-	make large_cmp
-	@echo
-	sudo ./$(usr)/slave 1 output/file.out fcntl $(ip)
-	make large_cmp
-	@echo
-	sudo ./$(usr)/slave 1 output/file.out mmap $(ip)
-	make large_cmp
+	sudo diff output/file.out $(sample1)2
 	@echo
 	sudo ./$(usr)/slave 10 output/file1.out output/file2.out output/file3.out output/file4.out output/file5.out output/file6.out output/file7.out output/file8.out output/file9.out output/file10.out fcntl $(ip)
 	make mult_cmp
